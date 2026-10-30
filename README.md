@@ -35,6 +35,9 @@ to refresh; left-click opens the feed. Source edits are local and may require
 - Read status is explicit (**Mark as read**) and persists locally. Changed
   release-note content becomes unread again. Notes remain readable offline
   after the first successful fetch, with a stale/error notice.
+- **Mark all as read** marks all loaded releases, including history and previews,
+  regardless of the active filter or search. Future releases and revised notes
+  become unread again. The feed currently loads up to 50 releases.
 - Search filters titles and the full notes. The bar badge counts relevant
   installed/newer notes, not every unread historical release.
 - The reader formats headings, lists, and code using escaped, non-interactive

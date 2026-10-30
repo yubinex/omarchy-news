@@ -25,6 +25,7 @@ BarWidget {
   }
   function refresh(force) { run(force ? ["feed", "--refresh"] : ["feed"]) }
   function markRead(tag) { run(["read", tag]) }
+  function markAllRead() { run(["read-all"]) }
   function open() { if (panelLoader.item) panelLoader.item.open() }
   function close() { if (panelLoader.item) panelLoader.item.close() }
   function toggle() { if (panelLoader.item) panelLoader.item.toggle() }

@@ -16,6 +16,7 @@ ShellRoot {
     })
     function refresh(force) {}
     function markRead(tag) {}
+    function markAllRead() {}
   }
   News.Panel { id: panel; hostWidget: host }
   Timer {

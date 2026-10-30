@@ -108,6 +108,15 @@ Panel {
             onClicked: root.filter = modelData
           }
         }
+        Item { width: Math.max(0, parent.width - x - markAllButton.width - parent.spacing); height: 1 }
+        NewsButton {
+          id: markAllButton
+          text: "Mark all as read"
+          quiet: true
+          enabled: root.hostWidget && !root.hostWidget.busy
+            && (root.feed.releases || []).some(function(r) { return r.unread })
+          onClicked: root.hostWidget.markAllRead()
+        }
       }
       Text {
         width: parent.width

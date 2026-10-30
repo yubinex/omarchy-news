@@ -77,6 +77,16 @@ class NewsTests(unittest.TestCase):
         self.assertTrue(self.feed(refresh=True)['releases'][0]['unread'])
         self.assertIn('not found', self.feed(read_tag='missing')['error'])
 
+    def test_read_all_persists_and_only_marks_current_revisions(self):
+        self.assertTrue(all(r['unread'] for r in self.feed()['releases']))
+        result = self.feed(read_all=True)
+        self.assertFalse(any(r['unread'] for r in result['releases']))
+        self.assertFalse(any(r['unread'] for r in self.feed()['releases']))
+        self.data[0]['body'] += '\nRevised'
+        self.data.append(release('v4.2.0'))
+        result = self.feed(refresh=True)
+        self.assertEqual([r['tag'] for r in result['releases'] if r['unread']], ['v4.0.7', 'v4.2.0'])
+
     def test_cache_and_stale_fallback(self):
         first = self.feed()
         self.feed()

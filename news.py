@@ -140,17 +140,17 @@ def empty_feed(error=''):
             'limitNote': 'Only the first 50 GitHub releases are fetched; older releases may be omitted.'}
 
 
-def feed(refresh=False, read_tag=None, cache_dir=None, state_dir=None):
+def feed(refresh=False, read_tag=None, cache_dir=None, state_dir=None, read_all=False):
     cache_dir = Path(cache_dir or Path(os.environ.get('XDG_CACHE_HOME', Path.home() / '.cache')) / 'omarchy-news')
     state_dir = Path(state_dir or Path(os.environ.get('XDG_STATE_HOME', Path.home() / '.local/state')) / 'omarchy-news')
     state_dir.mkdir(parents=True, exist_ok=True)
     # One lock covers read/modify/write of state AND cache across monitor processes.
     with open(state_dir / 'news.lock', 'a') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
-        return _feed_locked(refresh, read_tag, cache_dir, state_dir)
+        return _feed_locked(refresh, read_tag, cache_dir, state_dir, read_all)
 
 
-def _feed_locked(refresh, read_tag, cache_dir, state_dir):
+def _feed_locked(refresh, read_tag, cache_dir, state_dir, read_all=False):
     output = empty_feed()
     errors = []
     installed = detect([])
@@ -205,8 +205,8 @@ def _feed_locked(refresh, read_tag, cache_dir, state_dir):
         else:
             status = 'preview'
         revision = digest(release)
-        if release['tag'] == read_tag:
-            state['read'][read_tag] = revision
+        if read_all or release['tag'] == read_tag:
+            state['read'][release['tag']] = revision
             found = True
         release.update(status=status, unread=state['read'].get(release['tag']) != revision,
                        justInstalled=bool(key is not None and previous_key is not None
@@ -230,8 +230,10 @@ def main(argv=None):
         commands = parser.add_subparsers(dest='command', required=True, parser_class=Parser)
         commands.add_parser('feed').add_argument('--refresh', action='store_true')
         commands.add_parser('read').add_argument('tag')
+        commands.add_parser('read-all')
         args = parser.parse_args(argv)
-        output = feed(refresh=getattr(args, 'refresh', False), read_tag=getattr(args, 'tag', None))
+        output = feed(refresh=getattr(args, 'refresh', False), read_tag=getattr(args, 'tag', None),
+                      read_all=args.command == 'read-all')
     except Exception as exc:
         output = empty_feed(str(exc))
     print(json.dumps(output, ensure_ascii=False))
