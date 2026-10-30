@@ -68,6 +68,7 @@ BarWidget {
     text: "\uf1ea"
     slotSize: Style.bar.statusSlot
     active: root.opened
+    useActiveColor: false
     tooltipText: "Omarchy News\n" + root.feed.installedVersion + " · " + root.feed.channel + "\n" + root.unreadCount + " unread releases"
     Rectangle {
       visible: root.unreadCount > 0
@@ -77,7 +78,7 @@ BarWidget {
       anchors.centerIn: parent
       anchors.horizontalCenterOffset: Style.bar.iconCanvas / 2 + Style.space(1)
       anchors.verticalCenterOffset: -Style.bar.iconCanvas / 2
-      color: button.activeColor
+      color: button.foreground
     }
     onPressed: function(mouseButton) {
       if (mouseButton === Qt.RightButton) root.refresh(true)
