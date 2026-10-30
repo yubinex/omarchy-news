@@ -37,8 +37,9 @@ to refresh; left-click opens the feed. Source edits are local and may require
   after the first successful fetch, with a stale/error notice.
 - Search filters titles and the full notes. The bar badge counts relevant
   installed/newer notes, not every unread historical release.
-- The reader uses selectable plain text, omits embedded images, and never runs
-  commands from release notes. It opens only validated official release URLs.
+- The reader formats headings, lists, and code using escaped, non-interactive
+  rich text. It omits embedded images and never runs commands from release
+  notes. It opens only validated official release URLs through the Source button.
 - This is an Omarchy release feed, not an Arch package changelog or an audit of
   every local configuration change. Missing upstream notes cannot be turned
   into a guaranteed exhaustive changelog. Commit-level fallback is future work.
@@ -49,6 +50,7 @@ to refresh; left-click opens the feed. Source edits are local and may require
 python3 -m unittest discover -s tests -v
 python3 news.py feed
 qmllint -I /usr/share/omarchy/shell BarWidget.qml Panel.qml
+node tests/test_notes.cjs  # Development-only renderer tests; Node is not needed at runtime.
 bash tools/smoke-test.sh  # Requires a running Wayland desktop; opens a test panel briefly.
 ```
 
@@ -73,3 +75,11 @@ remain explicitly unverified previews.
 
 The UI is intentionally a first draft. Next design candidates: richer section
 cards, change-type filters, optional notifications, and commit-level details.
+
+### Reader refresh
+
+The panel now uses theme-aware flat controls, compact release rows, a sidebar
+search, and proportional text with formatted release-note headings and lists.
+It selects a relevant available/installed release automatically, falling back
+to the first match. Availability details are in the footer tooltip instead of
+occupying the header; fetch errors still remain visible.

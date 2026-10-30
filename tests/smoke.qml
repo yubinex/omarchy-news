@@ -22,6 +22,7 @@ ShellRoot {
     interval: 200
     running: true
     onTriggered: {
+      if (!panel.selected || panel.selected.tag !== "v4.0.7") throw new Error("Default release selection failed")
       panel.selectedTag = "v4.0.7"
       panel.open()
       if (panel.releases.length !== 2 || panel.selected.tag !== "v4.0.7") throw new Error("Feed binding failed")

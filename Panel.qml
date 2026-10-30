@@ -4,6 +4,7 @@ import Quickshell
 import qs.Commons
 import qs.Commons as Commons
 import qs.Ui
+import "Notes.js" as Notes
 
 Panel {
   id: root
@@ -14,6 +15,10 @@ Panel {
   property string filter: "All"
   property string selectedTag: ""
   readonly property var feed: hostWidget ? hostWidget.feed : ({releases: []})
+  readonly property color fg: Commons.Color.foreground
+  readonly property color muted: Qt.alpha(fg, 0.58)
+  readonly property color line: Qt.alpha(fg, 0.09)
+  readonly property string error: (hostWidget ? hostWidget.processError : "") || feed.error || ""
   readonly property var releases: (feed.releases || []).filter(function(r) {
     if (search.text && (r.title + " " + r.body).toLowerCase().indexOf(search.text.toLowerCase()) < 0) return false
     return filter === "All" || (filter === "Available" && r.status === "available")
@@ -21,30 +26,27 @@ Panel {
       || (filter === "History" && r.status === "history") || (filter === "Previews" && r.status === "preview")
   })
   readonly property var selected: {
-    var all = feed.releases || []
-    for (var i = 0; i < all.length; i++) if (all[i].tag === selectedTag) return all[i]
+    for (var i = 0; i < releases.length; i++) if (releases[i].tag === selectedTag) return releases[i]
     return null
   }
-  readonly property color fg: Commons.Color.foreground
-  readonly property color muted: Qt.rgba(fg.r, fg.g, fg.b, 0.65)
-  readonly property color tint: Qt.rgba(fg.r, fg.g, fg.b, 0.08)
-
-  function readable(body) {
-    // Plain text deliberately: no remote images, HTML, or executable instructions.
-    return (body || "No official release notes available.")
-      .replace(/!\[[^\]]*\]\([^\n]*\)/g, "")
-      .replace(/<img[^>]*>/g, "")
-      .replace(/^#{1,6}\s+/gm, "")
-      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1 ($2)")
-      .replace(/\r/g, "").replace(/\n{3,}/g, "\n\n").trim()
+  function chooseDefault() {
+    if (selected || !releases.length) return
+    var preferred = releases.filter(function(r) { return r.status === "available" || r.status === "installed" })
+    selectedTag = (preferred.length ? preferred[0] : releases[0]).tag
   }
+  onReleasesChanged: Qt.callLater(chooseDefault)
+  onOpenedChanged: if (opened) chooseDefault()
+  onSelectedTagChanged: detailScroll.contentY = 0
   function label(release) {
-    return (release.justInstalled ? "Just installed · " : "")
-      + ({installed: "Installed", available: "Newer release", history: "History", preview: "Preview"}[release.status] || release.status)
+    if (release.justInstalled) return "Just installed"
+    return {installed: "Installed", available: "Available", history: "Earlier release", preview: "Preview"}[release.status] || release.status
+  }
+  function dateLabel(value) {
+    var date = new Date(value)
+    return isNaN(date.getTime()) ? "" : Qt.formatDate(date, "d MMM yyyy")
   }
   function openSource() {
-    if (selected && /^https:\/\/github\.com\/omacom\/omarchy\/releases\/tag\/[^\s]+$/.test(selected.url))
-      Qt.openUrlExternally(selected.url)
+    if (selected && /^https:\/\/github\.com\/omacom\/omarchy\/releases\/tag\/[^\s]+$/.test(selected.url)) Qt.openUrlExternally(selected.url)
   }
 
   KeyboardPanel {
@@ -54,154 +56,204 @@ Panel {
     bar: root.bar
     open: root.opened
     centerOnBar: false
-    contentWidth: popup.fittedContentWidth(Style.space(880))
-    contentHeight: popup.fittedContentHeight(Style.space(680))
+    contentWidth: popup.fittedContentWidth(Style.space(900))
+    contentHeight: popup.fittedContentHeight(Style.space(660))
     focusTarget: keyCatcher
-
     PanelKeyCatcher {
       id: keyCatcher
       anchors.fill: parent
       z: -1
       onCloseRequested: root.close()
     }
+
     Column {
       id: content
       anchors.fill: parent
-      spacing: Style.space(12)
-
+      spacing: Style.space(18)
       Row {
         width: parent.width
         spacing: Style.space(12)
-        Text {
+        Column {
           width: parent.width - refreshButton.width - parent.spacing
-          text: "OMARCHY NEWS"
-          color: root.fg
-          font.family: Style.font.family
-          font.pixelSize: Style.font.heading
-          font.bold: true
+          spacing: Style.space(5)
+          Text {
+            text: "Omarchy News"
+            color: root.fg
+            font { family: "sans-serif"; pixelSize: Style.space(22); weight: Font.DemiBold }
+          }
+          Text {
+            text: (root.feed.installedVersion || "Unknown version") + "  /  " + (root.feed.channel || "unknown")
+            color: root.muted
+            font { family: "sans-serif"; pixelSize: Style.font.bodySmall }
+          }
         }
-        Controls.Button {
+        NewsButton {
           id: refreshButton
-          text: root.hostWidget && root.hostWidget.busy ? "Refreshing…" : "Refresh"
+          text: root.hostWidget && root.hostWidget.busy ? "Refreshing…" : "↻  Refresh"
           enabled: root.hostWidget && !root.hostWidget.busy
           onClicked: root.hostWidget.refresh(true)
         }
       }
-      Text {
-        width: parent.width
-        text: "Installed " + (root.feed.installedVersion || "unknown") + "  ·  " + (root.feed.channel || "unknown") + " channel"
-          + (root.feed.fetchedAt ? "  ·  Checked " + root.feed.fetchedAt.replace("T", " ").slice(0, 16) + " UTC" : "")
-        color: root.muted
-        font.pixelSize: Style.font.bodySmall
-        wrapMode: Text.Wrap
-      }
-      Text {
-        width: parent.width
-        visible: text !== ""
-        text: (root.hostWidget ? root.hostWidget.processError : "") || root.feed.error || root.feed.statusNote || ""
-        color: root.muted
-        font.pixelSize: Style.font.bodySmall
-        wrapMode: Text.Wrap
-        textFormat: Text.PlainText
-      }
+      Rectangle { width: parent.width; height: 1; color: root.line }
       Row {
-        spacing: Style.space(6)
+        width: parent.width
+        spacing: Style.space(4)
         Repeater {
           model: ["All", "Available", "Installed", "History", "Previews"]
-          delegate: Controls.Button {
+          delegate: NewsButton {
             required property string modelData
             text: modelData
-            highlighted: root.filter === modelData
+            quiet: true
+            selected: root.filter === modelData
             onClicked: root.filter = modelData
           }
         }
       }
-      Controls.TextField {
-        id: search
+      Text {
         width: parent.width
-        placeholderText: "Search release notes — shortcuts, apps, fixes…"
-        selectByMouse: true
+        visible: root.error !== ""
+        text: root.error
+        textFormat: Text.PlainText
+        wrapMode: Text.Wrap
+        color: root.muted
+        font { family: "sans-serif"; pixelSize: Style.font.bodySmall }
       }
       Row {
         width: parent.width
-        height: Math.max(Style.space(100), content.height - y)
-        spacing: Style.space(16)
-        ListView {
-          id: releaseList
-          width: parent.width * 0.31
+        height: Math.max(Style.space(100), content.height - y - footer.height - content.spacing)
+        spacing: Style.space(22)
+        Column {
+          id: sidebar
+          width: parent.width * 0.27
           height: parent.height
-          clip: true
-          spacing: Style.space(8)
-          model: root.releases
-          Controls.ScrollBar.vertical: Controls.ScrollBar {}
-          delegate: Rectangle {
-            required property var modelData
-            width: releaseList.width
-            height: card.implicitHeight + Style.space(24)
-            radius: Style.space(8)
-            color: root.selectedTag === modelData.tag ? Qt.rgba(root.fg.r, root.fg.g, root.fg.b, 0.17) : root.tint
-            Column {
-              id: card
-              anchors { left: parent.left; right: parent.right; top: parent.top; margins: Style.space(12) }
-              spacing: Style.space(7)
-              Text {
-                width: parent.width
-                text: (modelData.unread ? "●  " : "") + modelData.title
-                textFormat: Text.PlainText
-                color: root.fg
-                font.pixelSize: Style.font.body
-                font.bold: true
-                wrapMode: Text.Wrap
+          spacing: Style.space(12)
+          Controls.TextField {
+            id: search
+            width: parent.width
+            height: Style.space(34)
+            placeholderText: "Search changes…"
+            placeholderTextColor: root.muted
+            color: root.fg
+            selectByMouse: true
+            leftPadding: Style.space(12)
+            font { family: "sans-serif"; pixelSize: Style.font.body }
+            background: Rectangle {
+              radius: Style.space(7)
+              color: Qt.alpha(root.fg, 0.035)
+              border { width: 1; color: search.activeFocus ? Qt.alpha(root.fg, 0.3) : root.line }
+            }
+          }
+          ListView {
+            id: releaseList
+            width: parent.width
+            height: parent.height - y
+            clip: true
+            spacing: Style.space(4)
+            model: root.releases
+            Controls.ScrollBar.vertical: Controls.ScrollBar { policy: Controls.ScrollBar.AsNeeded }
+            delegate: Rectangle {
+              id: releaseCard
+              required property var modelData
+              readonly property bool current: root.selectedTag === modelData.tag
+              width: releaseList.width
+              height: Style.space(76)
+              radius: Style.space(8)
+              color: Qt.alpha(root.fg, current ? 0.095 : cardMouse.containsMouse ? 0.045 : 0)
+              Rectangle {
+                visible: releaseCard.current
+                x: 0; y: Style.space(17)
+                width: Style.space(3); height: parent.height - y * 2
+                radius: width / 2
+                color: Commons.Color.accent
               }
-              Text {
-                width: parent.width
-                text: root.label(modelData) + "\n" + (modelData.date || "").slice(0, 10)
-                color: root.muted
-                font.pixelSize: Style.font.bodySmall
-                wrapMode: Text.Wrap
+              Column {
+                anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: Style.space(14); rightMargin: Style.space(12) }
+                spacing: Style.space(7)
+                Row {
+                  width: parent.width
+                  spacing: Style.space(8)
+                  Text {
+                    width: parent.width - Style.space(14)
+                    text: releaseCard.modelData.tag
+                    textFormat: Text.PlainText
+                    elide: Text.ElideRight
+                    color: root.fg
+                    font { family: "sans-serif"; pixelSize: Style.font.body; weight: releaseCard.current ? Font.DemiBold : Font.Medium }
+                  }
+                  Rectangle {
+                    visible: releaseCard.modelData.unread
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: Style.space(5); height: width; radius: width / 2
+                    color: Qt.alpha(root.fg, 0.55)
+                  }
+                }
+                Text {
+                  width: parent.width
+                  text: root.label(releaseCard.modelData) + " · " + root.dateLabel(releaseCard.modelData.date)
+                  elide: Text.ElideRight
+                  color: root.muted
+                  font { family: "sans-serif"; pixelSize: Style.font.bodySmall }
+                }
+              }
+              MouseArea {
+                id: cardMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.selectedTag = releaseCard.modelData.tag
               }
             }
-            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { root.selectedTag = modelData.tag; detailScroll.contentY = 0 } }
-          }
-          Text {
-            anchors.centerIn: parent
-            width: parent.width - Style.space(20)
-            visible: releaseList.count === 0
-            text: root.hostWidget && root.hostWidget.busy ? "Loading official notes…" : "No releases in this view."
-            color: root.muted
-            wrapMode: Text.Wrap
+            Text {
+              anchors { top: parent.top; topMargin: Style.space(20); horizontalCenter: parent.horizontalCenter }
+              width: parent.width - Style.space(20)
+              visible: releaseList.count === 0
+              text: root.hostWidget && root.hostWidget.busy ? "Loading notes…" : "No matching releases"
+              color: root.muted
+              wrapMode: Text.Wrap
+              font { family: "sans-serif"; pixelSize: Style.font.body }
+            }
           }
         }
-        Rectangle { width: 1; height: parent.height; color: root.tint }
+        Rectangle { width: 1; height: parent.height; color: root.line }
         Column {
-          width: parent.width - releaseList.width - parent.spacing * 2 - 1
+          width: parent.width - sidebar.width - parent.spacing * 2 - 1
           height: parent.height
-          spacing: Style.space(10)
+          spacing: Style.space(12)
           Text {
             width: parent.width
-            text: root.selected ? root.selected.title : "What changed?"
+            text: root.selected ? root.selected.title : "You're all caught up"
             textFormat: Text.PlainText
-            color: root.fg
-            font.pixelSize: Style.font.heading
-            font.bold: true
             wrapMode: Text.Wrap
+            color: root.fg
+            font { family: "sans-serif"; pixelSize: Style.space(23); weight: Font.DemiBold }
           }
           Row {
+            width: parent.width
             visible: root.selected !== null
             spacing: Style.space(8)
-            Controls.Button { text: "Official notes ↗"; onClicked: root.openSource() }
-            Controls.Button {
-              text: root.selected && root.selected.unread ? "Mark as read" : "Read ✓"
+            Text {
+              width: Math.max(0, parent.width - sourceButton.width - readButton.width - parent.spacing * 2)
+              anchors.verticalCenter: parent.verticalCenter
+              text: root.selected ? root.dateLabel(root.selected.date) : ""
+              color: root.muted
+              elide: Text.ElideRight
+              font { family: "sans-serif"; pixelSize: Style.font.bodySmall }
+            }
+            NewsButton { id: sourceButton; text: "Source ↗"; quiet: true; onClicked: root.openSource() }
+            NewsButton {
+              id: readButton
+              text: root.selected && root.selected.unread ? "Mark read" : "✓ Read"
               enabled: root.selected && root.selected.unread && root.hostWidget && !root.hostWidget.busy
               onClicked: root.hostWidget.markRead(root.selected.tag)
             }
           }
+          Rectangle { width: parent.width; height: 1; color: root.line }
           Flickable {
             id: detailScroll
             width: parent.width
             height: Math.max(0, parent.height - y)
             contentWidth: width
-            contentHeight: notes.implicitHeight
+            contentHeight: notes.implicitHeight + Style.space(20)
             clip: true
             boundsBehavior: Flickable.StopAtBounds
             Controls.ScrollBar.vertical: Controls.ScrollBar {}
@@ -210,17 +262,25 @@ Panel {
               width: parent.width - Style.space(16)
               readOnly: true
               selectByMouse: true
-              textFormat: TextEdit.PlainText
+              textFormat: TextEdit.RichText
               wrapMode: TextEdit.Wrap
-              color: root.fg
-              selectionColor: root.muted
-              font.family: Style.font.family
-              font.pixelSize: Style.font.body
-              text: root.selected ? root.readable(root.selected.body)
-                : "Select a release to read its official changes.\n\nNewer releases are shown before updating. Installed and historical notes remain available afterward.\n\nPreviews are separate from stable updates. ‘Removed from new installs’ does not mean an app was removed from your machine.\n\nThis first version shows upstream release notes, not a per-file audit of your computer. It never installs updates."
+              color: Qt.alpha(root.fg, 0.88)
+              selectionColor: Qt.alpha(root.fg, 0.25)
+              font { family: "sans-serif"; pixelSize: Style.space(14) }
+              text: root.selected ? Notes.render(root.selected.body) : "<p>Try another filter or search to explore the release notes.</p>"
             }
           }
         }
+      }
+      Text {
+        id: footer
+        width: parent.width
+        text: "Official release notes · " + (root.feed.fetchedAt ? "Updated " + Qt.formatDateTime(new Date(root.feed.fetchedAt), "HH:mm") : "Not yet synced")
+        color: root.muted
+        font { family: "sans-serif"; pixelSize: Style.font.bodySmall }
+        Controls.ToolTip.visible: footerMouse.containsMouse
+        Controls.ToolTip.text: root.feed.statusNote || "Notes describe upstream releases, not every local change."
+        MouseArea { id: footerMouse; anchors.fill: parent; hoverEnabled: true; acceptedButtons: Qt.NoButton }
       }
     }
   }
