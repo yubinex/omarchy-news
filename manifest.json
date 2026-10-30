@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "yubinex.omarchy-news",
+  "name": "Omarchy News",
+  "version": "0.1.0",
+  "author": "yubinex",
+  "description": "Official Omarchy release notes before and after updating, with a local reading history.",
+  "license": "MIT",
+  "kinds": ["bar-widget"],
+  "entryPoints": { "barWidget": "BarWidget.qml" },
+  "barWidget": {
+    "displayName": "Omarchy News",
+    "description": "Browse official release notes and see what changed.",
+    "category": "Info",
+    "aliases": ["news", "changelog", "releases"],
+    "allowMultiple": false,
+    "defaultSection": "right"
+  }
+}
