@@ -256,27 +256,47 @@ Panel {
               onClicked: root.hostWidget.markRead(root.selected.tag)
             }
           }
-          Rectangle { width: parent.width; height: 1; color: root.line }
-          Flickable {
-            id: detailScroll
+          Rectangle {
+            id: notesFrame
             width: parent.width
             height: Math.max(0, parent.height - y)
-            contentWidth: width
-            contentHeight: notes.implicitHeight + Style.space(20)
-            clip: true
-            boundsBehavior: Flickable.StopAtBounds
-            Controls.ScrollBar.vertical: Controls.ScrollBar {}
-            TextEdit {
-              id: notes
-              width: parent.width - Style.space(16)
-              readOnly: true
-              selectByMouse: true
-              textFormat: TextEdit.RichText
-              wrapMode: TextEdit.Wrap
-              color: Qt.alpha(root.fg, 0.88)
-              selectionColor: Qt.alpha(root.fg, 0.25)
-              font { family: "sans-serif"; pixelSize: Style.space(14) }
-              text: root.selected ? Notes.render(root.selected.body) : "<p>Try another filter or search to explore the release notes.</p>"
+            radius: Style.space(8)
+            color: Qt.alpha(root.fg, 0.025)
+            border { width: 1; color: Qt.alpha(root.fg, 0.18) }
+
+            Flickable {
+              id: detailScroll
+              anchors { fill: parent; margins: Style.space(14) }
+              contentWidth: width
+              contentHeight: notes.implicitHeight + Style.space(8)
+              clip: true
+              boundsBehavior: Flickable.StopAtBounds
+              Controls.ScrollBar.vertical: Controls.ScrollBar {
+                policy: size < 1 ? Controls.ScrollBar.AlwaysOn : Controls.ScrollBar.AlwaysOff
+                minimumSize: 0.06
+                implicitWidth: Style.space(5)
+                background: Rectangle {
+                  radius: width / 2
+                  color: Qt.alpha(root.fg, 0.05)
+                }
+                contentItem: Rectangle {
+                  implicitWidth: Style.space(5)
+                  radius: width / 2
+                  color: Qt.alpha(root.fg, parent.pressed ? 0.65 : 0.32)
+                }
+              }
+              TextEdit {
+                id: notes
+                width: parent.width - Style.space(18)
+                readOnly: true
+                selectByMouse: true
+                textFormat: TextEdit.RichText
+                wrapMode: TextEdit.Wrap
+                color: Qt.alpha(root.fg, 0.88)
+                selectionColor: Qt.alpha(root.fg, 0.25)
+                font { family: "sans-serif"; pixelSize: Style.space(14) }
+                text: root.selected ? Notes.render(root.selected.body) : "<p>Try another filter or search to explore the release notes.</p>"
+              }
             }
           }
         }
