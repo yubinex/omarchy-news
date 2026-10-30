@@ -61,13 +61,24 @@ BarWidget {
       if (code !== 0) root.processError = "News helper failed (exit " + code + "). Cached notes remain visible."
     }
   }
-  WidgetButton {
+  BarIconButton {
     id: button
     anchors.fill: parent
     bar: root.bar
-    text: root.vertical ? "News" : "News" + (root.unreadCount ? " · " + root.unreadCount : "")
-    active: root.unreadCount > 0
+    text: "\uf1ea"
+    slotSize: Style.bar.statusSlot
+    active: root.opened
     tooltipText: "Omarchy News\n" + root.feed.installedVersion + " · " + root.feed.channel + "\n" + root.unreadCount + " unread releases"
+    Rectangle {
+      visible: root.unreadCount > 0
+      width: Style.space(4)
+      height: width
+      radius: width / 2
+      anchors.centerIn: parent
+      anchors.horizontalCenterOffset: Style.bar.iconCanvas / 2 + Style.space(1)
+      anchors.verticalCenterOffset: -Style.bar.iconCanvas / 2
+      color: button.activeColor
+    }
     onPressed: function(mouseButton) {
       if (mouseButton === Qt.RightButton) root.refresh(true)
       else root.toggle()
