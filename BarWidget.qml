@@ -10,7 +10,9 @@ BarWidget {
   property var feed: ({releases: [], installedVersion: "", channel: "", error: ""})
   property string processError: ""
   readonly property bool busy: fetcher.running
-  readonly property int unreadCount: (feed.releases || []).filter(function(r) { return r.unread && r.status !== "preview" }).length
+  readonly property int unreadCount: (feed.releases || []).filter(function(r) {
+    return r.unread && (r.status === "available" || r.status === "installed" || r.justInstalled)
+  }).length
   readonly property bool opened: panelLoader.item ? panelLoader.item.opened : false
   implicitWidth: button.implicitWidth
   implicitHeight: button.implicitHeight

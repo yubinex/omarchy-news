@@ -35,6 +35,8 @@ to refresh; left-click opens the feed. Source edits are local and may require
 - Read status is explicit (**Mark as read**) and persists locally. Changed
   release-note content becomes unread again. Notes remain readable offline
   after the first successful fetch, with a stale/error notice.
+- Search filters titles and the full notes. The bar badge counts relevant
+  installed/newer notes, not every unread historical release.
 - The reader uses selectable plain text, omits embedded images, and never runs
   commands from release notes. It opens only validated official release URLs.
 - This is an Omarchy release feed, not an Arch package changelog or an audit of
@@ -47,7 +49,27 @@ to refresh; left-click opens the feed. Source edits are local and may require
 python3 -m unittest discover -s tests -v
 python3 news.py feed
 qmllint -I /usr/share/omarchy/shell BarWidget.qml Panel.qml
+bash tools/smoke-test.sh  # Requires a running Wayland desktop; opens a test panel briefly.
 ```
 
 No tokens or GitHub credentials are needed. Unauthenticated GitHub API rate
 limits apply. Refresh uses a cache to avoid unnecessary network requests.
+
+State lives under `$XDG_STATE_HOME/omarchy-news` (default
+`~/.local/state/omarchy-news`); cached release notes live under
+`$XDG_CACHE_HOME/omarchy-news` (default `~/.cache/omarchy-news`). The initial
+feed is limited to the 50 most recent GitHub release entries. Channel-aware
+availability currently targets stable; edge/unknown and unmatched RC releases
+remain explicitly unverified previews.
+
+## Local verification (2026-10-30)
+
+- 11 isolated Python tests passed, including stale cache, read revisions,
+  upgrade tracking, version ordering, and state writes.
+- QML lint passed; a Wayland runtime smoke test exercised release rendering,
+  selection, the Installed filter, and opening/closing the panel.
+- Live GitHub fetch returned 50 releases. This machine was detected as
+  `4.0.6-1` / stable; `v4.0.6` was installed and `v4.5.0-rc1/rc2` were previews.
+
+The UI is intentionally a first draft. Next design candidates: richer section
+cards, change-type filters, optional notifications, and commit-level details.

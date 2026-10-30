@@ -15,6 +15,7 @@ Panel {
   property string selectedTag: ""
   readonly property var feed: hostWidget ? hostWidget.feed : ({releases: []})
   readonly property var releases: (feed.releases || []).filter(function(r) {
+    if (search.text && (r.title + " " + r.body).toLowerCase().indexOf(search.text.toLowerCase()) < 0) return false
     return filter === "All" || (filter === "Available" && r.status === "available")
       || (filter === "Installed" && (r.status === "installed" || r.justInstalled))
       || (filter === "History" && r.status === "history") || (filter === "Previews" && r.status === "preview")
@@ -114,6 +115,12 @@ Panel {
             onClicked: root.filter = modelData
           }
         }
+      }
+      Controls.TextField {
+        id: search
+        width: parent.width
+        placeholderText: "Search release notes — shortcuts, apps, fixes…"
+        selectByMouse: true
       }
       Row {
         width: parent.width
