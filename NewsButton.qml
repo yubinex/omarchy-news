@@ -7,10 +7,24 @@ Controls.AbstractButton {
   id: root
   property bool selected: false
   property bool quiet: false
-  implicitWidth: label.implicitWidth + Style.space(24)
+  implicitWidth: Math.ceil(Math.max(normalMetrics.advanceWidth, boldMetrics.advanceWidth)) + Style.space(24)
   implicitHeight: Style.space(32)
   hoverEnabled: true
   opacity: enabled ? 1 : 0.45
+  TextMetrics {
+    id: normalMetrics
+    text: root.text
+    font.family: label.font.family
+    font.pixelSize: label.font.pixelSize
+    font.weight: Font.Normal
+  }
+  TextMetrics {
+    id: boldMetrics
+    text: root.text
+    font.family: label.font.family
+    font.pixelSize: label.font.pixelSize
+    font.weight: Font.DemiBold
+  }
   background: Rectangle {
     radius: Style.space(7)
     color: Qt.alpha(Commons.Color.foreground, root.down ? 0.18 : root.selected ? 0.13 : root.hovered ? 0.09 : root.quiet ? 0 : 0.045)

@@ -19,10 +19,16 @@ ShellRoot {
     function markAllRead() {}
   }
   News.Panel { id: panel; hostWidget: host }
+  News.NewsButton { id: measuredTab; text: "Installed"; visible: false }
   Timer {
     interval: 200
     running: true
     onTriggered: {
+      var tabWidth = measuredTab.implicitWidth
+      measuredTab.selected = true
+      if (measuredTab.implicitWidth !== tabWidth) throw new Error("Tab width changed on selection")
+      measuredTab.selected = false
+      if (measuredTab.implicitWidth !== tabWidth) throw new Error("Tab width changed on deselection")
       if (!panel.selected || panel.selected.tag !== "v4.0.7") throw new Error("Default release selection failed")
       panel.selectedTag = "v4.0.7"
       panel.open()
